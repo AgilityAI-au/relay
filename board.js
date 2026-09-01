@@ -22,7 +22,7 @@
 /* ---------------------------------------------------------------- constants */
 
 const STATES = [
-  { id: 'todo',   label: 'To Do',       sub: 'Ready to pull — nothing blocking it' },
+  { id: 'todo',   label: 'To Do',       sub: 'Not started. A card shows what it is waiting on.' },
   { id: 'doing',  label: 'In Progress', sub: 'Work in flight right now' },
   { id: 'review', label: 'Review',      sub: 'Claimed done — not yet accepted by a human' },
   { id: 'done',   label: 'Done',        sub: 'Accepted against its criteria' }
@@ -96,7 +96,7 @@ files — so does your AI. Nothing else sits in between.
 | **Look** | This page | Sample projects, already loaded. Everything moves — nothing here is a screenshot. |
 | **Use** | Chrome, Edge or Arc | Click **Open**, choose a folder, edit stories and save them back. |
 | **Ask an AI** | Any chat, including free accounts | Select a story, click **Ask an AI**. The board writes the prompt; you carry it to ChatGPT, Claude or Gemini and paste the reply back. |
-| **Connected** | An AI with folder access | It edits the files directly and the board shows the result. |
+| **Connected** | An AI with folder access | It edits the files directly. Click **Open** again to see the changes — the board does not watch the folder yet. |
 
 **Opening a folder needs a Chromium browser** — Chrome, Edge, Arc or Brave. Safari and
 Firefox can read this page and the samples but cannot open a folder.
@@ -2127,6 +2127,8 @@ const state = {
   settings: null,
   settingsKey: 'vibe',
   bridgeId: null,
+  rootHandle: null,
+  draftAt: null,
   docs: {},
   activeDoc: ''
 };
@@ -2271,7 +2273,7 @@ function flash(msg) {
   flashTimer = setTimeout(() => { state.flash = ''; render(); }, 2600);
 }
 
-function markDirty(t) { t._dirty = true; }
+function markDirty(t) { t._dirty = true; scheduleDraft(); }
 
 /* ------------------------------------------------------------------ settings
    Project identity and label vocabulary.
@@ -2384,6 +2386,18 @@ function settingsHTML() {
           <input type="file" id="logoInput" accept="image/*" hidden>
         </div>
       </div>
+    </div>
+
+    <div class="set-sect">
+      <h3>Your work</h3>
+      <p class="set-note">Edits to a sample are kept in this browser until you save them into a
+        folder. <b>Save</b> asks you where to put them — it never downloads files on its own.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" data-action="export-one">Export all stories as one file</button>
+        ${state.draftAt ? '<button class="btn" data-action="discard-draft">Discard my edits</button>' : ''}
+      </div>
+      <p class="set-note" style="margin-top:8px">Exporting is for Safari and Firefox, which cannot
+        open a folder. One file, only when you ask.</p>
     </div>
 
     <div class="set-sect">
@@ -3406,7 +3420,10 @@ function render() {
   const shown = visible().length;
   el('footNote').innerHTML = state.flash
     ? `<span class="saved-pulse">${esc(state.flash)}</span>`
-    : `${shown} of ${state.tickets.length} shown · ${esc(state.source)} · local-first, nothing leaves this device`;
+    : state.draftAt
+      ? `${shown} of ${state.tickets.length} shown · <span class="saved-pulse">your edits were restored</span> ·
+         <button class="linkbtn" data-action="discard-draft">discard them</button> · nothing leaves this device`
+      : `${shown} of ${state.tickets.length} shown · ${esc(state.source)} · local-first, nothing leaves this device`;
 
   if (focusMemo) {
     const node = document.querySelector(`[data-field="${focusMemo.field}"]`);
@@ -3464,6 +3481,8 @@ document.addEventListener('click', (ev) => {
           .catch(() => { box.select(); flash('Press Cmd/Ctrl-C to copy'); render(); });
         return;
       }
+      case 'discard-draft':  if (confirm('Discard your edits and reload the original sample?')) discardDraft(); return;
+      case 'export-one':     exportOneFile(); closeSettings(); render(); return;
       case 'settings':       openSettings(); return;
       case 'settings-close': closeSettings(); render(); return;
       case 'logo-pick':      el('logoInput').click(); return;
@@ -3809,6 +3828,7 @@ function deleteStory(t) {
   if (!confirm(`Delete ${t.id} — "${t.title}"?\n\nIf it was loaded from disk the file is not removed; delete it there too.`)) return;
   state.tickets = state.tickets.filter((x) => x.id !== t.id);
   state.selectedId = null;
+  scheduleDraft();
   derive();
   render();
   flash(`${t.id} removed from the board`);
@@ -3892,6 +3912,106 @@ function buildIndex() {
   return L.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
 }
 
+/* ------------------------------------------------------------------ drafts
+   Edits to a sample project are kept in this browser so nothing is lost on a
+   reload — which is what made Save feel urgent enough to reach for, and why
+   people were hitting the download path by accident.
+
+   Only for the built-in samples. When a real folder is open the files are the
+   truth, and a draft sitting alongside them would just be a second answer. */
+
+const DRAFT_PREFIX = 'kanban4.draft:';
+const draftKey = () => DRAFT_PREFIX + (state.settingsKey || 'default');
+
+let draftTimer = null;
+
+function scheduleDraft() {
+  if (state.dirHandle) return;                 // folder open — files are the truth
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(writeDraft, 700);
+}
+
+function writeDraft() {
+  if (state.dirHandle) return;
+  try {
+    localStorage.setItem(draftKey(), JSON.stringify({
+      savedAt: new Date().toISOString(),
+      dirty: state.tickets.filter((t) => t._dirty).map((t) => t.id),
+      stories: state.tickets.map(serialise)
+    }));
+  } catch (_) { /* storage full or blocked — the board still works, just not across reloads */ }
+}
+
+function readDraft() {
+  try {
+    const raw = localStorage.getItem(draftKey());
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    return Array.isArray(d.stories) && d.stories.length ? d : null;
+  } catch (_) { return null; }
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(draftKey()); } catch (_) { /* nothing to do */ }
+}
+
+function discardDraft() {
+  clearDraft();
+  state.draftAt = null;
+  loadSeed(state.seed);
+  flash('Your edits were discarded — back to the original');
+  render();
+}
+
+/* --------------------------------------------------------------- exporting
+   Safari and Firefox cannot open a folder at all, so a download is their only
+   way out. One file, asked for deliberately — never several, never automatic. */
+
+const STORY_SEP = '\n<!-- ───────────────── next story ───────────────── -->\n\n';
+
+function exportOneFile() {
+  const head = [
+    `# ${projectTitle()} — all stories`, '',
+    `Exported ${TODAY()} from Relay. ${state.tickets.length} stories, newest format.`, '',
+    'Each story below is a complete file. To use these with an AI, split them back into',
+    'one file per story in a `tasks/` folder — the separator comments mark the boundaries.',
+    '', '---', ''
+  ].join('\n');
+  const name = projectTitle().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'stories';
+  download(`${name}-stories.md`, head + state.tickets.map(serialise).join(STORY_SEP));
+  flash(`Exported ${state.tickets.length} stories as one file`);
+}
+
+/* ----------------------------------------------------------- choosing where
+   Save with nothing open asks for a folder. "Choose where to save" is a dialog
+   everyone recognises; a burst of downloads is not. */
+
+/* Both pickers share one `id`, so the browser reopens wherever you last were —
+   Save starts in the folder you opened, not Documents. `startIn` takes priority
+   while we still hold a handle from this session. */
+function pickerOptions() {
+  const opts = { mode: 'readwrite', id: 'relay-project' };
+  if (state.rootHandle) opts.startIn = state.rootHandle;
+  return opts;
+}
+
+async function chooseFolder() {
+  if (!window.showDirectoryPicker) return false;
+  try {
+    const dir = await window.showDirectoryPicker(pickerOptions());
+    state.dirHandle = await dir.getDirectoryHandle('tasks', { create: true });
+    state.rootHandle = dir;
+    state.project = dir.name;
+    state.source = dir.name + '/';
+    state.settingsKey = state.source;
+    state.tickets.forEach((t) => { t._fh = null; });   // nothing lives there yet
+    return true;
+  } catch (err) {
+    if (err && err.name !== 'AbortError') alert('Could not use that folder: ' + err.message);
+    return false;
+  }
+}
+
 /* -------------------------------------------------------------- load / save */
 
 function ingest(mdList, { project, source, dirHandle = null, handles = null, docs = null }) {
@@ -3919,10 +4039,24 @@ function ingest(mdList, { project, source, dirHandle = null, handles = null, doc
   render();
 }
 
-function loadSeed(key) {
+function loadSeed(key, ignoreDraft) {
   const seed = SEEDS[key] || SEEDS.vibe;
   state.seed = SEEDS[key] ? key : 'vibe';
-  ingest(seed.tickets(), { project: seed.project, source: seed.label, docs: seed.docs() });
+  state.settingsKey = seed.label;
+  state.draftAt = null;
+
+  const draft = ignoreDraft ? null : readDraft();
+  ingest(draft ? draft.stories : seed.tickets(),
+         { project: seed.project, source: seed.label, docs: seed.docs() });
+  if (draft) {
+    state.draftAt = draft.savedAt;
+    // Mark only what actually changed. Flagging everything was convenient for
+    // saving the whole restored set, but it told the user 21 stories were edited
+    // when one was. Older drafts have no list — fall back to all.
+    const changed = new Set(draft.dirty || state.tickets.map((t) => t.id));
+    state.tickets.forEach((t) => { t._dirty = changed.has(t.id); });
+    derive();
+  }
   const pick = el('seedPick');
   if (pick) pick.value = state.seed;
   flash(seed.hint);
@@ -3935,7 +4069,8 @@ async function openFromDisk() {
       alert('This browser cannot open local folders. Use Chrome, Edge or Arc — or click Demo.');
       return;
     }
-    const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
+    const dir = await window.showDirectoryPicker(pickerOptions());
+    state.rootHandle = dir;          // remembered, so a later Save starts here
 
     // prefer a tasks/ subfolder if the AGENTS.md §1 layout is present
     let target = dir;
@@ -3984,18 +4119,35 @@ async function saveAll() {
   const dirty = state.tickets.filter((t) => t._dirty);
   if (!dirty.length) { flash('Nothing to save'); render(); return; }
 
-  // No folder open (demo, or a browser without the API) → hand back files.
+  // Nothing open yet → ask where to put it. A folder dialog is familiar; a burst
+  // of downloads looks like the page misbehaving.
   if (!state.dirHandle) {
-    dirty.forEach((t) => download(`${t.id}.md`, serialise(t)));
-    download('INDEX.md', buildIndex());
-    flash(`Downloaded ${dirty.length} file${dirty.length > 1 ? 's' : ''} + INDEX.md — open a folder to save in place`);
-    dirty.forEach((t) => { t._dirty = false; });
-    derive(); render();
-    return;
+    if (!window.showDirectoryPicker) {
+      alert('This browser cannot save into a folder — Chrome, Edge, Arc or Brave can.\n\n' +
+            'Use Settings → Export all stories to get your work out as a single file instead.');
+      return;
+    }
+    if (!(await chooseFolder())) return;      // cancelled: nothing written, nothing downloaded
   }
 
+  // First save into a fresh folder writes everything, not just what changed.
+  const writeAll = state.tickets.every((t) => !t._fh);
+  const toWrite = writeAll ? state.tickets : dirty;
+
   try {
-    for (const t of dirty) {
+    // Give a new folder the project's documents too, so it is a real project
+    // rather than a bag of stories.
+    if (writeAll && state.rootHandle) {
+      for (const [name, text] of Object.entries(state.docs || {})) {
+        try {
+          const dh = await state.rootHandle.getFileHandle(name, { create: true });
+          const dw = await dh.createWritable();
+          await dw.write(text);
+          await dw.close();
+        } catch (_) { /* a doc failing to write must not lose the stories */ }
+      }
+    }
+    for (const t of toWrite) {
       let fh = t._fh;
       if (!fh) fh = await state.dirHandle.getFileHandle(`${t.id}.md`, { create: true });
       const w = await fh.createWritable();
@@ -4011,7 +4163,11 @@ async function saveAll() {
     await iw.write(buildIndex());
     await iw.close();
 
-    flash(`Saved ${dirty.length} file${dirty.length > 1 ? 's' : ''} + INDEX.md to ${state.project}`);
+    clearDraft();
+    state.draftAt = null;
+    flash(writeAll
+      ? `Saved ${toWrite.length} stories + INDEX.md into ${state.project}/tasks — this folder is now a real project`
+      : `Saved ${toWrite.length} file${toWrite.length > 1 ? 's' : ''} + INDEX.md to ${state.project}`);
   } catch (err) {
     alert('Save failed: ' + err.message);
   }
@@ -4020,7 +4176,9 @@ async function saveAll() {
 }
 
 window.addEventListener('beforeunload', (e) => {
-  if (state.tickets_dirty) { e.preventDefault(); e.returnValue = ''; }
+  // Sample edits survive in this browser, so only a real folder with unsaved
+  // changes is worth interrupting someone over.
+  if (state.dirHandle && state.tickets_dirty) { e.preventDefault(); e.returnValue = ''; }
 });
 
 /* ---------------------------------------------------------------------- boot */

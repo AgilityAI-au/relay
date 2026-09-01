@@ -4,7 +4,7 @@
 
 AI runs a leg, you run a leg, and the handover is on the board where everyone can see it.
 
-### [→ Try it live](https://AGILITYAI.github.io/relay/)
+### [→ Try it live](https://agilityai-au.github.io/relay/)
 
 No sign-up, no install, nothing to download. Three sample projects are already loaded.
 
@@ -60,7 +60,7 @@ Pick whichever rung you can reach. Nothing below the last one costs anything.
 | **1 · Look** | The link above | The samples, fully working. |
 | **2 · Use** | Chrome, Edge, Arc or Brave | Download a project below, click **Open**, and edit your own stories. |
 | **3 · Ask an AI** | Any chat — free accounts included | Select a story, click **Ask an AI**. The board writes the prompt; you paste it into ChatGPT, Claude or Gemini and paste the reply back. |
-| **4 · Connected** | An AI that can read a folder | It edits the files directly and the board shows the result. |
+| **4 · Connected** | An AI that can read a folder | It edits the files directly. Reopen the folder in the board to see the changes — it does not watch the folder yet. |
 
 > **Opening a folder needs a Chromium browser** — Chrome, Edge, Arc or Brave. Safari and
 > Firefox can view the samples but cannot open a folder on your computer.
@@ -184,4 +184,4 @@ Built by [AgilityAI](https://agilityai.com.au).
 
 ---
 
-<sub>Relay v0.1.0 · generated 2026-09-01 · built from the development repo, do not edit here</sub>
+<sub>Relay v0.1.0 · generated 2026-09-02 · built from the development repo, do not edit here</sub>

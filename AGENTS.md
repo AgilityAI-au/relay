@@ -76,8 +76,12 @@ No skipping `doing`. `review` means acceptance criteria are claimed met and a hu
 agreed.
 
 ### `actor`: who holds it
-`AI` | `Human`. This drives the AI/Human swimlane split, which is the point of the board —
-see §5.
+`AI` | `Human` | `Both`. This drives the actor swimlane split, which is the point of the
+board — see §6.
+
+`Both` is for work that is a conversation rather than a task: the human steers, the AI
+writes, and it is never quite finished. Writing the project files is the clearest case.
+**A `Both` story is never "ready to dispatch"** — it always needs a person.
 
 ### Supporting fields
 | Field | Values | Notes |

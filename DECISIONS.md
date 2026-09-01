@@ -390,3 +390,97 @@ stays thin because most things are correctly refused entry.
   oriented, the board is not being maintained — and that is the thing to fix, not to route
   around.
 - Refs: AI-HUMAN-WAYS-OF-WORKING.md
+
+### D-047 · Save asks for a folder; it never downloads on its own
+- 2026-09-01 · decided · risk
+- Why: with no folder open, Save fired one download per changed story plus INDEX.md, which
+  trips Chrome's "allow multiple downloads?" prompt on the second file. To a first-time visitor
+  that reads as the page misbehaving — the worst possible moment for it, since it happens the
+  first time someone tries to keep their work. Save now opens the folder picker, which is a
+  dialog everyone recognises. Cancelling writes nothing. The first save into a fresh folder
+  writes every story plus the project's documents, so the result is a real project rather than
+  a bag of files.
+- Refs: kanban-4.js `saveAll()` / `chooseFolder()`
+
+### D-048 · Sample edits persist in the browser
+- 2026-09-01 · decided · scope
+- Why: edits lived only in memory, so a reload lost them — which is what made Save feel urgent
+  enough to reach for and pushed people onto the download path. Drafts are kept per sample in
+  browser storage, restored on load with a visible "your edits were restored · discard them"
+  notice. Only for the built-in samples: when a real folder is open the files are the truth and
+  a draft beside them would just be a competing answer. The close-tab warning now fires only in
+  folder mode, because nothing else is at risk.
+- Refs: kanban-4.js `scheduleDraft()` / `readDraft()`
+
+### D-049 · One deliberate export, for the browsers that cannot open a folder
+- 2026-09-01 · decided · scope
+- Why: Safari and Firefox have no directory picker, so downloading is their only way to get work
+  out — it cannot simply be removed. But it is now one file, asked for from Settings, never
+  several fired automatically. A single download does not trigger the multi-download prompt at
+  all. Re-importing that file is not supported yet; the separators mark the boundaries so it can
+  be split by hand or by an AI.
+- Refs: kanban-4.js `exportOneFile()`, ROADMAP.md
+
+### D-050 · Both folder dialogs share one picker id
+- 2026-09-01 · decided · scope
+- Why: the picker was called bare, so every dialog opened at Documents regardless of where the
+  user actually works. Giving Open and Save the same `id` makes the browser reopen wherever
+  that id was last used — so Save starts in the folder you opened, which is almost always where
+  you want it. `startIn` takes priority while a handle from the current session is still held.
+  One shared `pickerOptions()` so the two cannot drift apart.
+- Refs: kanban-4.js `pickerOptions()`
+
+### D-051 · Grid panes are placed explicitly, not by auto-placement
+- 2026-09-02 · decided · risk
+- Why: below 1040px the rail was hidden with `display: none`, which removes it from the grid
+  entirely. The board then auto-placed into the `0px` first column and an empty detail pane took
+  the `1fr` — a blank board on any laptop in split screen or a non-maximised window. Found by a
+  hands-on review, invisible to 227 headless assertions. Rail, board and detail now declare their
+  own `grid-column`, so hiding any of them cannot reshuffle the others. The reason is written
+  beside the media query and asserted in the suite.
+- Refs: kanban-4.html `.rail/.board/.detail`
+
+### D-052 · `--faint` clears AA; the density stays
+- 2026-09-02 · decided · risk
+- Why: `--faint` measured 2.81:1 dark and 2.89:1 light — below AA (4.5) and below even the
+  large-text floor — while carrying chips, story IDs, column subtitles and the footer. The
+  reviewer's remedy was 12px minimum type, which would have undone the density that makes this
+  not look like a generic AI-built site. Measurement showed the problem was contrast, not size:
+  `--dim` already passed at 5.5/5.9 on the same scale. Moved the token to #7e7e8a / #6d6d79,
+  clearing AA on both panel and sunken while staying below `--dim` so the three-level hierarchy
+  survives. Type sizes unchanged.
+- Refs: kanban-4.html tokens, test/parse-test.js
+
+### D-053 · A restored draft marks only what changed
+- 2026-09-02 · decided · scope
+- Why: restoring a draft flagged every story dirty. Convenient for writing the whole set on the
+  next save, but it told the user 21 stories were edited when one was — and "edited" is a signal
+  that has to stay honest. The draft now records which ids were dirty. Saving still writes
+  everything on a first save to a fresh folder, because that is a separate concern.
+- Refs: kanban-4.js `writeDraft()` / `loadSeed()`
+
+### D-054 · Column subtitles and the About page must not overstate
+- 2026-09-02 · decided · risk
+- Why: two small untruths, both found by hands-on review. The To Do column read "Ready to pull —
+  nothing blocking it" while containing stories with unmet dependencies. The About page said a
+  connected AI edits files "and the board shows the result", implying a live refresh that does not
+  exist. For a tool whose argument is that accurate files beat chat history, copy that overstates
+  is worse than a missing feature.
+- Refs: kanban-4.js `STATES`, `ABOUT_DOC`, release/README.md
+
+### D-055 · The board keeps its columns on a phone and scrolls sideways
+- 2026-09-02 · decided · scope
+- Why: the grid fix stopped the blank board but left the page unusable on a handset — the topbar
+  had no wrap and no overflow inside `body { overflow: hidden }`, so its buttons were clipped and
+  unreachable. The topbar now scrolls; header counts and keyboard hints drop out at 720px; at
+  560px one board column fills the screen so you swipe between states, which is how every mobile
+  Kanban behaves. Hiding the keyboard hints also removes "drag a card to move it", which is false
+  on touch — HTML5 drag is pointer-only, and the editor's state dropdown is the touch path.
+- Refs: kanban-4.html media queries
+
+### D-056 · Untested on a real handset, and it says so
+- 2026-09-02 · decided · risk
+- Why: the mobile rules were written from reading the layout, not from a device. That is worth
+  stating in the file rather than implying coverage the work does not have — a comment sits above
+  the breakpoints saying to verify before relying on it.
+- Refs: kanban-4.html

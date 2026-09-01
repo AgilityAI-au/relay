@@ -23,7 +23,7 @@
 
   --text:  #16161a;
   --dim:   #63636e;
-  --faint: #9797a3;
+  --faint: #6d6d79;   /* 5.10:1 on panel, 4.53:1 on sunken — AA */
 
   --s-todo:   #7b8698;
   --s-doing:  #16a34a;
@@ -56,7 +56,7 @@
 
   --text:  #e9e9ef;
   --dim:   #8b8b98;
-  --faint: #5c5c68;
+  --faint: #7e7e8a;   /* 4.62:1 on panel, 4.80:1 on sunken — AA */
 
   --s-todo:   #8a94a6;
   --s-doing:  #34d17c;
@@ -98,7 +98,11 @@ body {
   padding: 0 14px; height: 46px;
   border-bottom: 1px solid var(--line);
   background: var(--panel);
+  /* body is overflow:hidden, so without this the buttons are simply clipped off
+     the right-hand edge on a narrow window and cannot be reached at all. */
+  overflow-x: auto; scrollbar-width: none;
 }
+.topbar::-webkit-scrollbar { display: none; }
 .brand { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
 .brand-dot { width: 15px; height: 15px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 .brand-name { font: 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .16em; font-weight: 600; }
@@ -173,7 +177,7 @@ select.filter { height: 28px; padding: 0 6px; border: 1px solid var(--line); bor
 .body.rail-off.detail-on { grid-template-columns: 0px 1fr 380px; }
 
 /* ---- rail: SAFe hierarchy, Epic → Feature ---- */
-.rail { border-right: 1px solid var(--line); background: var(--panel); overflow-y: auto; min-width: 0; }
+.rail { grid-column: 1; border-right: 1px solid var(--line); background: var(--panel); overflow-y: auto; min-width: 0; }
 .rail-head { padding: 11px 12px 7px; color: var(--faint); position: sticky; top: 0; background: var(--panel); }
 .rail-epic { padding: 9px 12px 3px; color: var(--dim); font: 9.5px/1 var(--mono);
              text-transform: uppercase; letter-spacing: .1em; border-top: 1px solid var(--line-soft); }
@@ -188,7 +192,7 @@ select.filter { height: 28px; padding: 0 6px; border: 1px solid var(--line); bor
 .bar span { display: block; height: 100%; background: var(--s-done); }
 
 /* ---- board ---- */
-.board { overflow: auto; padding: 0 0 40px; min-width: 0; }
+.board { grid-column: 2; overflow: auto; padding: 0 0 40px; min-width: 0; }
 .lane-head { position: sticky; left: 0; display: flex; align-items: center; gap: 9px;
              padding: 13px 14px 7px; color: var(--dim); }
 .lane-head .rule { flex: 1; height: 1px; background: var(--line); }
@@ -268,7 +272,7 @@ body[data-density="full"] .card-goal { -webkit-line-clamp: 8; }
 body[data-density="full"] .card-more { display: flex; }
 
 /* ============================================================ DETAIL / EDITOR */
-.detail { border-left: 1px solid var(--line); background: var(--panel); overflow-y: auto; min-width: 0; }
+.detail { grid-column: 3; border-left: 1px solid var(--line); background: var(--panel); overflow-y: auto; min-width: 0; }
 .detail-inner { padding: 14px; }
 .detail-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .detail-head .btn.icon { margin-left: auto; }
@@ -327,6 +331,8 @@ textarea.fi { resize: vertical; min-height: 56px; font: 11.5px/1.55 var(--mono);
 kbd { padding: 1px 4px; border: 1px solid var(--line); border-radius: 3px;
       background: var(--sunken); color: var(--dim); font: 9px/1.4 var(--mono); }
 .saved-pulse { color: var(--ok); }
+.linkbtn { border: 0; background: none; padding: 0; cursor: pointer;
+           color: var(--accent); font: inherit; text-decoration: underline; }
 
 .empty-board { padding: 60px 20px; text-align: center; color: var(--faint); }
 
@@ -584,7 +590,32 @@ body.is-dragging .card-more { pointer-events: none; }
   .doclist { display: none; }
 }
 
+/* ---- narrow windows and phones ----------------------------------------
+   The board keeps its columns and scrolls sideways, which is how a Kanban
+   board behaves on a phone. What goes is chrome that needs a keyboard or a
+   pointer. Untested on a real handset — verify before relying on it. */
+@media (max-width: 720px) {
+  .topbar { gap: 10px; }
+  .stats { display: none; }              /* counts are a nicety, not a control */
+  .statusbar .keys { display: none; }    /* keyboard hints, and drag does not work on touch */
+}
+
+@media (max-width: 560px) {
+  /* One column fills the screen and you swipe between them. */
+  .cols { grid-template-columns: repeat(4, minmax(84vw, 1fr)); padding: 0 8px 10px; }
+  .lane-head { padding: 12px 10px 6px; }
+  .topbar { padding: 0 8px; }
+  .brand-sep, .brand-proj { display: none; }
+  .search { display: none; }             /* needs a keyboard; the rail filter still works */
+  .body.detail-on .detail { width: 100vw; }
+  .plan-inner { padding: 14px 10px 50px; }
+  .docmain-inner { padding: 18px 14px 50px; }
+}
+
 @media (max-width: 1040px) {
+  /* The panes are placed by explicit grid-column above. Without that, hiding the
+     rail dropped it out of the grid, auto-placing the board into the 0px first
+     column and giving the 1fr to an empty detail pane — a blank board under 1040px. */
   .body, .body.detail-on { grid-template-columns: 0px 1fr 0px; }
   .body.detail-on .detail { position: fixed; right: 0; top: 0; bottom: 0; width: 380px; z-index: 20; box-shadow: var(--shadow); }
   .rail { display: none; }
