@@ -2,9 +2,9 @@
 
 ## Finding work
 
-1. Read tasks/INDEX.md, Active section only.
+1. Read TASKS.md. It holds every active and parked story, one block each.
 2. Pick state todo, no hold, all depends_on **done**.
-3. Read that one story file — not the whole folder.
+3. Finished work lives in TASKS-DONE.md — you rarely need it.
 
 A dependency sitting in review is **not** done. It means a person has not looked yet.
 
@@ -30,6 +30,6 @@ Finish at state review, actor Human. **Stop there.**
 
 ## Never
 
-- Write tasks/INDEX.md by hand — it is generated.
+- Move a story out of TASKS.md without putting it in TASKS-DONE.md.
 - Mark a story done.
 - Commit unless asked.

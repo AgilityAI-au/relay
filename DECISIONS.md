@@ -76,6 +76,8 @@ stays thin because most things are correctly refused entry.
   Backlog.md and kanban-md. The files are a table; the index is a materialised view — so the
   later move to a database changes nothing about the model.
 - Refs: AGENTS.md §1, §8
+- **SUPERSEDED by D-057 (2026-09-03).** The reasoning held for a tool with a CLI; without one
+  the split cost more than it bought. The split layout is still read.
 
 ### D-009 · YAML frontmatter replaces the dash-list field format
 - 2026-08-30 · decided · risk
@@ -119,6 +121,8 @@ stays thin because most things are correctly refused entry.
   is the same problem as index-first task loading, so keeping the tier boundaries aligned now
   makes the eventual merge a join rather than a rewrite.
 - Refs: AGENTS.md §8, CLAUDE.md "Where this is going"
+- **Revised 2026-09-23.** News-Feed is archived. Current position: Relay stays standalone;
+  it is the likely management layer for ADL later, shape undecided. No integration work until then.
 
 ### D-015 · The demo backlog is embedded and loads on open; no file picking to see the board
 - 2026-08-30 · decided · scope
@@ -173,6 +177,8 @@ stays thin because most things are correctly refused entry.
   second source of truth into a cache. Backlog.md avoids the problem by computing listings on
   demand through its CLI; with no install available to us, a generated file is the equivalent.
 - Refs: AGENTS.md §9, demo/generate.py
+- **SUPERSEDED by D-057 (2026-09-03).** Correct while an index existed. It no longer does in the
+  default layout — `TASKS.md` is the list rather than a summary of it.
 
 ### D-022 · Archive on done-and-aged; parked work stays in place
 - 2026-08-30 · decided · scope
@@ -371,6 +377,8 @@ stays thin because most things are correctly refused entry.
   agent believes it. The board now owns the file, and its header carries a story count and a
   date so drift is detectable rather than silent.
 - Refs: kanban-4.js `buildIndex()`, AGENTS.md §9
+- **SUPERSEDED by D-057 (2026-09-03).** Still true for the split layout, which the board keeps
+  reading and writing. The default layout has no index to maintain.
 
 ### D-045 · `actor` gains a third value, `Both`
 - 2026-09-01 · decided · scope
@@ -478,9 +486,45 @@ stays thin because most things are correctly refused entry.
   on touch — HTML5 drag is pointer-only, and the editor's state dropdown is the touch path.
 - Refs: kanban-4.html media queries
 
-### D-056 · Untested on a real handset, and it says so
+### D-056 · Mobile rules verified on a device
 - 2026-09-02 · decided · risk
-- Why: the mobile rules were written from reading the layout, not from a device. That is worth
-  stating in the file rather than implying coverage the work does not have — a comment sits above
-  the breakpoints saying to verify before relying on it.
-- Refs: kanban-4.html
+- Why: written from reading the layout rather than from a handset, and the file said so rather
+  than implying coverage it did not have. Checked on an iPhone the same day — readable and
+  navigable. Type is small at that width, which is the density choice showing through rather than
+  a defect; a base font bump at the 560px breakpoint is the lever if it ever becomes a complaint.
+- Refs: kanban-4.html media queries
+
+### D-057 · Two files at the root, not one per story
+- 2026-09-03 · decided · scope
+- **Supersedes D-008, D-021 and D-044.**
+- Why: one file per story only pays if you have a tool or a CLI to query the folder. Backlog.md
+  and kanban-md both do; we deliberately do not. Without one, a hundred files is hostile to
+  anyone browsing the project — now the main way people meet it — and any whole-backlog question
+  costs an agent a tool call per story. The decisive reason is subtler: **the split is why an
+  index had to exist**, and the index is a cache that can go stale. It needed a generation date,
+  a story count and a staleness rule purely to stop it lying about the real files, and we shipped
+  a bug where nothing wrote it at all. `TASKS.md` is not a summary of the backlog; it is the
+  backlog. `TASKS-DONE.md` takes finished work, the only category that grows without bound and
+  the only one nobody reads.
+- What it costs: per-story git history, and near-zero merge conflicts. Both matter with several
+  writers or a CLI; neither applies to a single person with a board.
+- The split layout is still read and written, so existing projects keep working.
+- Refs: kanban-4.js `splitStories()` / `buildTasksFile()`, AGENTS.md §1, seeds/generate.py
+
+### D-058 · The earlier argument leaned on the wrong evidence
+- 2026-09-03 · decided · risk
+- Why: D-008 rested partly on Backlog.md and kanban-md independently converging on one file per
+  task. That is evidence about what tool-builders do — and **both ship a CLI**, which is exactly
+  what makes many small files cheap to query. Convergence between tools that share an assumption
+  we had explicitly rejected was not evidence for us. Worth recording as a reasoning failure, not
+  just a reversed decision: check whether a precedent shares your constraints before borrowing it.
+- Refs: D-008, D-057
+
+### D-059 · The plugin skills are part of the contract and must move with it
+- 2026-09-03 · decided · risk
+- Why: `skills/work-the-board` and `skills/start-project` still told agents to read
+  `tasks/INDEX.md` a full turn after that file stopped being written. They are installable —
+  an agent following them would look for a file that no longer exists and then improvise.
+  Skills instruct behaviour, so they rank with AGENTS.md rather than with documentation, and
+  any change to the storage contract has to sweep them.
+- Refs: skills/*/SKILL.md, AGENTS.md §1

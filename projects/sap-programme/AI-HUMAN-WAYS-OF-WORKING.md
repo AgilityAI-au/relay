@@ -16,9 +16,8 @@ your-project/
 ├── CLAUDE.md          the working context                     ← the real content
 ├── DESIGN.md          how it works and why                    ← when CLAUDE.md gets full
 ├── DECISIONS.md       choices that changed something          ← thin on purpose
-└── tasks/
-    ├── INDEX.md       generated — one row per story
-    └── T-001.md …     one story per file
+├── TASKS.md           active and parked work                  ← the backlog
+└── TASKS-DONE.md      finished work, kept for the record
 ```
 
 Two rules make it work:
@@ -59,7 +58,7 @@ all of them; a long one becomes a maintenance burden written for whichever tool 
 first.
 
 What goes in:
-- how to find work (read the index, pick one, read that one file)
+- how to find work (read TASKS.md, pick one story, work only that)
 - what "done" means, and who decides — **a person, never the AI**
 - what must never be touched (generated files)
 - a line saying: read `CLAUDE.md` for context and house rules
@@ -108,16 +107,18 @@ stories it touches.
 
 ## How work is tracked
 
-**One story per file.** Small enough to finish in about a day, with a goal and acceptance
-criteria a person could check.
+**One block per story** in `TASKS.md`. Small enough to finish in about a day, with a goal
+and acceptance criteria a person could check.
 
-**`tasks/INDEX.md` is generated.** One row per story so an assistant can see the whole
-backlog for a few hundred tokens and then open only the one file it needs. Nobody edits it
-by hand; the board rewrites it on save.
+**Finished work moves to `TASKS-DONE.md`.** That is the only category that grows without
+bound and the only one nobody reads, so moving it keeps the file you *do* read short.
 
-Why bother splitting? Because a single growing task file eventually costs more context than
-the work does, and because per-story history becomes real — you can see how one story
-changed without reading a diff of everything.
+Why not a file per story? It only pays if you have a tool or a command line to query the
+folder. Without one, a hundred files is hostile to anyone browsing the project, and any
+whole-backlog question costs an assistant a separate read per story. It also forces an index
+into existence — and an index is a cache that can quietly stop matching the files it
+describes. One file removes the question: it is not a summary of the backlog, it *is* the
+backlog.
 
 ---
 
@@ -134,9 +135,9 @@ something a human wants in their backlog.
    them; at Task level they appear. It is a zoom control, not a second backlog.
 2. **Orientation notes go in the story.** A `## Working notes` section is the AI's scratch
    space, next to the work it belongs to, and ignorable.
-3. **Continuity comes from the board, not a journal.** If the assistant keeps states, actors
+3. **Continuity comes from the backlog, not a journal.** If the assistant keeps states, actors
    and the Test Log accurate, it does not need private notes to find its place next session —
-   the index already says what is in flight and what is waiting.
+   `TASKS.md` already says what is in flight and what is waiting.
 
 That third point is the important one. **An AI that maintains the board does not need a
 memory of its own.** If it is keeping a private journal to stay oriented, the board is not

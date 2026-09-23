@@ -81,11 +81,11 @@ Five things you actually do:
 
 Paste these one at a time.
 
-> Read AGENTS.md, then tasks/INDEX.md, and tell me which story is ready to start.
+> Read AGENTS.md, then TASKS.md, and tell me which story is ready to start.
 
 > Work that story. Follow AGENTS.md — stop at review and don't mark it done.
 
-> Add a story for *(something you want)*, with a goal and acceptance criteria, then regenerate the index.
+> Add a story for *(something you want)*, with a goal and acceptance criteria, then keep TASKS.md tidy.
 
 The second one is the one to watch. **The AI stopping is the surprise** — it finishes at
 *review* and hands the work back, because a person accepts work, not the assistant.
@@ -121,8 +121,8 @@ Or browse them unzipped in [`projects/`](projects/).
 
 | File | Why it exists |
 |---|---|
-| `tasks/` | One story per file. Small, reviewable, and readable without any tool. |
-| `tasks/INDEX.md` | Generated. One row per story so an AI can see the whole backlog cheaply and then open only the file it needs. Never edited by hand. |
+| `TASKS.md` | Every active and parked story, one block each. Readable on its own, with or without the board. |
+| `TASKS-DONE.md` | Finished work, kept for the record so the file you read stays short. |
 | `AGENTS.md` | The rules an AI follows here — how to find work, what *done* means, what it must not do. Short, because every assistant reads it. |
 | `CLAUDE.md` | Working context and house rules, with the reasons behind them. |
 | `DECISIONS.md` | Choices that changed the timeline, the scope, the risk or the cost. Nothing else — that gate is what keeps it worth reading. |
@@ -184,4 +184,4 @@ Built by [AgilityAI](https://agilityai.com.au).
 
 ---
 
-<sub>Relay v0.1.0 · generated 2026-09-02 · built from the development repo, do not edit here</sub>
+<sub>Relay v0.1.0 · generated 2026-09-23 · built from the development repo, do not edit here</sub>

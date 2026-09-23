@@ -20,6 +20,6 @@ wizard: ten stories on the board, each producing one real file.
 
 Open this folder in Claude Code (or the Claude app with folder access) and say:
 
-> Read AGENTS.md, then read tasks/INDEX.md and tell me which story is ready.
+> Read AGENTS.md, then read TASKS.md and tell me which story is ready.
 
 That is the whole loop. The board shows you what happened.

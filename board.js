@@ -125,8 +125,8 @@ missing.
 
 | File | Why it exists |
 |---|---|
-| \`tasks/\` | One story per file. Small, reviewable, and readable without any tool. |
-| \`tasks/INDEX.md\` | Generated. One row per story so an AI can find work without reading every file. Never edit it by hand. |
+| \`TASKS.md\` | Every active and parked story, one block each. Readable on its own, with or without this board. |
+| \`TASKS-DONE.md\` | Finished work, kept for the record so the file you read stays short. |
 | \`AGENTS.md\` | The rules an AI follows here — how to find work, what "done" means, what it must not do. |
 | \`CLAUDE.md\` | Working context and house rules, with the reasons behind them. |
 | \`DECISIONS.md\` | Decisions that changed the timeline, the scope, the risk or the cost. Nothing else. |
@@ -216,7 +216,7 @@ reads the same folder an AI agent does, so both see one source of truth.`,
 
 ## Finding work
 
-1. Read \`tasks/INDEX.md\` — one row per story, cheap to load.
+1. Read \`TASKS.md\` — every active and parked story, one block each.
 2. Pick a story with \`state: todo\`, no \`hold\`, and all \`depends_on\` **done**.
 3. Read that one story file. Do not read the whole folder.
 
@@ -231,7 +231,7 @@ reads the same folder an AI agent does, so both see one source of truth.`,
 
 | Rule | Why |
 |---|---|
-| Never write \`INDEX.md\` | It is generated. Regenerate it instead. |
+| Keep TASKS.md tidy | One block per story. |
 | A dependency in \`review\` is not met | Only \`done\` counts — a human has not agreed yet. |
 | Nothing auto-commits | The human is always the gate. |`,
 
@@ -1004,9 +1004,9 @@ milestone is T-013 — showing it to one person.`,
 
 ## Finding work
 
-1. Read tasks/INDEX.md, Active section only.
+1. Read TASKS.md. It holds every active and parked story, one block each.
 2. Pick state todo, no hold, all depends_on **done**.
-3. Read that one story file — not the whole folder.
+3. Finished work lives in TASKS-DONE.md — you rarely need it.
 
 A dependency sitting in review is **not** done. It means a person has not looked yet.
 
@@ -1032,7 +1032,7 @@ Finish at state review, actor Human. **Stop there.**
 
 ## Never
 
-- Write tasks/INDEX.md by hand — it is generated.
+- Move a story out of TASKS.md without putting it in TASKS-DONE.md.
 - Mark a story done.
 - Commit unless asked.`,
 
@@ -1824,9 +1824,9 @@ Increment. The board and the AI read the same folder.`,
 
 ## Finding work
 
-1. Read tasks/INDEX.md. Do not read the whole folder.
+1. Read TASKS.md — every active and parked story, one block each.
 2. Pick a story with state todo, no hold, and all depends_on **done**.
-3. Read that one story file.
+3. Completed work is in TASKS-DONE.md; you rarely need to open it.
 
 ## Working
 
@@ -1889,7 +1889,7 @@ wizard: ten stories on the board, each producing one real file.
 
 Open this folder in Claude Code (or the Claude app with folder access) and say:
 
-> Read AGENTS.md, then read tasks/INDEX.md and tell me which story is ready.
+> Read AGENTS.md, then read TASKS.md and tell me which story is ready.
 
 That is the whole loop. The board shows you what happened.`,
 
@@ -1900,9 +1900,9 @@ That is the whole loop. The board shows you what happened.`,
 
 ## Finding work
 
-1. Read tasks/INDEX.md first — one row per story. Do not read every file.
+1. Read TASKS.md — every active and parked story is in there.
 2. Pick a story with state todo, no hold, and all depends_on **done**.
-3. Read that one story file and work only that.
+3. Work only that story.
 
 ## Working
 
@@ -1918,7 +1918,7 @@ That is the whole loop. The board shows you what happened.`,
 |---|---|
 | Ask rather than guess | A document full of plausible invention is worse than a short true one. |
 | The human accepts work | Review means claimed done, not done. |
-| Never write INDEX.md | It is generated. Regenerate it. |
+| Keep the two files honest | Active and parked in TASKS.md, finished in TASKS-DONE.md. |
 | Record real decisions | If it moves timeline, scope, risk or commercials, it goes in DECISIONS.md. |`
 ,
 
@@ -1948,7 +1948,7 @@ If something needs more than about a day, split it.
 ## Current state
 
 Project setup. Ten stories in tasks/. Work them in dependency order — the board
-and tasks/INDEX.md both show what is ready.`
+and TASKS.md both show what is ready.`
 };
 
 /* ------------------------------------------------------------------- seeds */
@@ -2128,6 +2128,8 @@ const state = {
   settingsKey: 'vibe',
   bridgeId: null,
   rootHandle: null,
+  storeMode: 'single',
+  savedOnce: false,   // 'single' = TASKS.md + TASKS-DONE.md · 'split' = tasks/*.md
   draftAt: null,
   docs: {},
   activeDoc: ''
@@ -3835,7 +3837,7 @@ function deleteStory(t) {
 }
 
 /* ------------------------------------------------------------- index writer
-   The board regenerates tasks/INDEX.md on every save.
+   The board regenerates tasks/INDEX.md on every save — split layout only.
 
    Splitting a backlog into one file per story only works if the index is
    trustworthy — a stale index is worse than no index, because an agent will
@@ -3999,8 +4001,9 @@ async function chooseFolder() {
   if (!window.showDirectoryPicker) return false;
   try {
     const dir = await window.showDirectoryPicker(pickerOptions());
-    state.dirHandle = await dir.getDirectoryHandle('tasks', { create: true });
     state.rootHandle = dir;
+    state.dirHandle = null;
+    state.storeMode = 'single';      // a fresh folder gets the readable layout
     state.project = dir.name;
     state.source = dir.name + '/';
     state.settingsKey = state.source;
@@ -4010,6 +4013,73 @@ async function chooseFolder() {
     if (err && err.name !== 'AbortError') alert('Could not use that folder: ' + err.message);
     return false;
   }
+}
+
+/* --------------------------------------------------------- single-file store
+   Two files at the project root:
+
+     TASKS.md        active and parked work
+     TASKS-DONE.md   completed work, so the file you read stays short
+
+   Why not one file per story: the split only pays if you have a tool or a CLI to
+   query it. Without one, a folder of 100 files is hostile to a human browsing the
+   repo, and whole-backlog questions cost an agent one tool call per story. It also
+   forced an INDEX.md into existence — a cache, which can go stale, and did. With
+   the stories in one file, the file *is* the list.
+
+   The split layout is still read, so older folders keep working (AGENTS.md §1). */
+
+/** A story starts with `---` immediately followed by an `id:` line. A `---`
+    horizontal rule inside a body cannot match, so bodies stay free-form. */
+function splitStories(text) {
+  const src = String(text || '').replace(/\r\n/g, '\n');
+  const re = /^---[ \t]*\nid:[ \t]*\S+/gm;
+  const starts = [];
+  let m;
+  while ((m = re.exec(src)) !== null) starts.push(m.index);
+  return starts.map((from, i) =>
+    src.slice(from, i + 1 < starts.length ? starts[i + 1] : undefined));
+}
+
+function parseTasksFile(text) {
+  return splitStories(text).map(parseTicket).filter(Boolean);
+}
+
+/** One file holding many stories, with a header a human can read on GitHub. */
+function buildTasksFile(stories, kind) {
+  const active = stories.filter((t) => !t.hold).length;
+  const parked = stories.filter((t) => t.hold === 'deferred').length;
+  const blocked = stories.filter((t) => t.hold === 'blocked').length;
+
+  const head = kind === 'done'
+    ? [`# Completed — ${projectTitle()}`, '',
+       `${stories.length} finished ${stories.length === 1 ? 'story' : 'stories'}. ` +
+       'Kept for the record; nothing here needs reading to do today\'s work.', '',
+       'Active work is in TASKS.md.']
+    : [`# Tasks — ${projectTitle()}`, '',
+       `**${active} active**` + (blocked ? ` · ${blocked} blocked` : '') +
+       (parked ? ` · ${parked} parked` : '') + '. Completed work is in TASKS-DONE.md.', '',
+       'Each block below is one story. Edit them here by hand, or open this folder in',
+       'the board. How work moves between states is in AGENTS.md.'];
+
+  return head.join('\n') + '\n\n' + stories.map(serialise).join('\n') + '\n';
+}
+
+const TASKS_FILE = 'TASKS.md';
+const DONE_FILE = 'TASKS-DONE.md';
+
+async function readTextFile(dir, name) {
+  try {
+    const fh = await dir.getFileHandle(name);
+    return await (await fh.getFile()).text();
+  } catch (_) { return null; }         // absent is normal, not an error
+}
+
+async function writeTextFile(dir, name, text) {
+  const fh = await dir.getFileHandle(name, { create: true });
+  const w = await fh.createWritable();
+  await w.write(text);
+  await w.close();
 }
 
 /* -------------------------------------------------------------- load / save */
@@ -4072,33 +4142,48 @@ async function openFromDisk() {
     const dir = await window.showDirectoryPicker(pickerOptions());
     state.rootHandle = dir;          // remembered, so a later Save starts here
 
-    // prefer a tasks/ subfolder if the AGENTS.md §1 layout is present
-    let target = dir;
-    for await (const [name, handle] of dir.entries()) {
-      if (name === 'tasks' && handle.kind === 'directory') { target = handle; break; }
-    }
-
-    // Project documents always come from the folder root, whether or not
-    // stories live in a tasks/ subfolder.
+    // Project documents come from the root either way.
     const docs = {};
     for await (const [name, handle] of dir.entries()) {
       if (handle.kind !== 'file' || !name.endsWith('.md')) continue;
-      if (/^INDEX\.md$/i.test(name)) continue;
+      if (/^(INDEX|TASKS|TASKS-DONE)\.md$/i.test(name)) continue;
       const text = await (await handle.getFile()).text();
       if (!/^---\n[\s\S]*?\nid:/m.test(text)) docs[name] = text;   // not a story file
     }
 
-    const texts = [], handles = [];
-    for await (const [name, handle] of target.entries()) {
-      if (handle.kind !== 'file' || !name.endsWith('.md')) continue;
-      if (/^INDEX\.md$/i.test(name) || docs[name] !== undefined) continue;
-      const text = await (await handle.getFile()).text();
-      if (!parseTicket(text)) continue;
-      texts.push(text);
-      handles.push(handle);
-    }
-    if (!texts.length) { alert('No story files (*.md with frontmatter and an id) found in that folder.'); return; }
+    // Single-file layout first; fall back to a tasks/ folder so older downloads
+    // and hand-split projects still open (AGENTS.md §1).
+    const tasksText = await readTextFile(dir, TASKS_FILE);
+    let texts = [], handles = null, mode = 'single', target = null;
 
+    if (tasksText !== null) {
+      texts = splitStories(tasksText);
+      const doneText = await readTextFile(dir, DONE_FILE);
+      if (doneText) texts = texts.concat(splitStories(doneText));
+    } else {
+      for await (const [name, handle] of dir.entries()) {
+        if (name === 'tasks' && handle.kind === 'directory') { target = handle; break; }
+      }
+      if (target) {
+        mode = 'split';
+        handles = [];
+        for await (const [name, handle] of target.entries()) {
+          if (handle.kind !== 'file' || !name.endsWith('.md')) continue;
+          if (/^INDEX\.md$/i.test(name) || docs[name] !== undefined) continue;
+          const text = await (await handle.getFile()).text();
+          if (!parseTicket(text)) continue;
+          texts.push(text);
+          handles.push(handle);
+        }
+      }
+    }
+
+    if (!texts.length) {
+      alert('No stories found.\n\nExpected TASKS.md at the top of the folder, or a tasks/ folder of story files.');
+      return;
+    }
+
+    state.storeMode = mode;
     ingest(texts, { project: dir.name, source: dir.name + '/', dirHandle: target, handles, docs });
     flash(`Opened ${texts.length} stories from ${dir.name}`);
     render();
@@ -4121,7 +4206,7 @@ async function saveAll() {
 
   // Nothing open yet → ask where to put it. A folder dialog is familiar; a burst
   // of downloads looks like the page misbehaving.
-  if (!state.dirHandle) {
+  if (!state.rootHandle) {
     if (!window.showDirectoryPicker) {
       alert('This browser cannot save into a folder — Chrome, Edge, Arc or Brave can.\n\n' +
             'Use Settings → Export all stories to get your work out as a single file instead.');
@@ -4130,44 +4215,49 @@ async function saveAll() {
     if (!(await chooseFolder())) return;      // cancelled: nothing written, nothing downloaded
   }
 
-  // First save into a fresh folder writes everything, not just what changed.
-  const writeAll = state.tickets.every((t) => !t._fh);
-  const toWrite = writeAll ? state.tickets : dirty;
+  const firstSave = state.tickets.every((t) => !t._fh) && !state.savedOnce;
 
   try {
-    // Give a new folder the project's documents too, so it is a real project
-    // rather than a bag of stories.
-    if (writeAll && state.rootHandle) {
+    // Give a new folder the project's documents too, so the result is a real
+    // project rather than a bag of stories.
+    if (firstSave) {
       for (const [name, text] of Object.entries(state.docs || {})) {
-        try {
-          const dh = await state.rootHandle.getFileHandle(name, { create: true });
-          const dw = await dh.createWritable();
-          await dw.write(text);
-          await dw.close();
-        } catch (_) { /* a doc failing to write must not lose the stories */ }
+        try { await writeTextFile(state.rootHandle, name, text); }
+        catch (_) { /* a doc failing must not cost us the stories */ }
       }
     }
-    for (const t of toWrite) {
-      let fh = t._fh;
-      if (!fh) fh = await state.dirHandle.getFileHandle(`${t.id}.md`, { create: true });
-      const w = await fh.createWritable();
-      await w.write(serialise(t));
-      await w.close();
-      t._fh = fh;
-      t._dirty = false;
-      t._isNew = false;
-    }
-    // The index is ours to maintain — a stale one is worse than none.
-    const ih = await state.dirHandle.getFileHandle('INDEX.md', { create: true });
-    const iw = await ih.createWritable();
-    await iw.write(buildIndex());
-    await iw.close();
 
+    if (state.storeMode === 'split') {
+      // Older layout: one file per story, plus the generated index it needs.
+      for (const t of (firstSave ? state.tickets : dirty)) {
+        let fh = t._fh;
+        if (!fh) fh = await state.dirHandle.getFileHandle(`${t.id}.md`, { create: true });
+        const w = await fh.createWritable();
+        await w.write(serialise(t));
+        await w.close();
+        t._fh = fh;
+      }
+      await writeTextFile(state.dirHandle, 'INDEX.md', buildIndex());
+      flash(`Saved ${dirty.length} stor${dirty.length === 1 ? 'y' : 'ies'} + INDEX.md to ${state.project}`);
+    } else {
+      // Both files are rewritten every time. They are small, and it means a story
+      // that moved to done cannot be left behind in the active file.
+      const done = state.tickets.filter((t) => t.state === 'done');
+      const live = state.tickets.filter((t) => t.state !== 'done');
+      await writeTextFile(state.rootHandle, TASKS_FILE, buildTasksFile(live, 'active'));
+      if (done.length) {
+        await writeTextFile(state.rootHandle, DONE_FILE, buildTasksFile(done, 'done'));
+      }
+      flash(firstSave
+        ? `Saved ${state.tickets.length} stories into ${state.project} — this folder is now a real project`
+        : `Saved ${live.length} active` + (done.length ? ` + ${done.length} done` : '') +
+          ` to ${state.project}`);
+    }
+
+    state.tickets.forEach((t) => { t._dirty = false; t._isNew = false; });
+    state.savedOnce = true;
     clearDraft();
     state.draftAt = null;
-    flash(writeAll
-      ? `Saved ${toWrite.length} stories + INDEX.md into ${state.project}/tasks — this folder is now a real project`
-      : `Saved ${toWrite.length} file${toWrite.length > 1 ? 's' : ''} + INDEX.md to ${state.project}`);
   } catch (err) {
     alert('Save failed: ' + err.message);
   }

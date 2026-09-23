@@ -14,24 +14,25 @@ Point the board at any folder containing an `AGENTS.md` with this shape and it c
 
 ```
 AGENTS.md          this contract
-CLAUDE.md          how to work on the repo
+CLAUDE.md          how to work on the project
 README.md          what this is
-DESIGN.md          UI/UX spec
-DATA-MODEL.md      entities and fields
+DESIGN.md          how it behaves and why
 DECISIONS.md       the decision log
-tasks/
-  INDEX.md         generated — never hand-edit
-  T-001.md         one ticket per file
-  archive/         done, aged out
-reports/           generated status reports
-demo/              small sample backlog for the showcase
-archive/
-  versions/        superseded builds
-  governance/      parked experiments
+TASKS.md           every active and parked story, one block each
+TASKS-DONE.md      finished work, kept for the record
 ```
 
-Only `tasks/*.md` and `DECISIONS.md` are authored. `INDEX.md` and `reports/` are **generated and
-disposable** — regenerate rather than merge them.
+Flat, and readable without any tool. **`TASKS.md` is the backlog** — a human can scroll it,
+GitHub renders it, and an agent reads the whole thing in one go.
+
+### Why not one file per story
+It only pays if you have a tool or a CLI to query the folder. Without one, a hundred files is
+hostile to anyone browsing the project, and any whole-backlog question costs an agent a tool
+call per story. It also forces an index into existence — a cache, which can go stale. With the
+stories in one file, **the file is the list**.
+
+> **The older split layout is still read.** A folder with `tasks/*.md` and an `INDEX.md` opens
+> and saves in that shape, so existing projects keep working. New folders get the two files.
 
 ---
 
@@ -43,8 +44,8 @@ The board uses the words a scrum master or RTE already knows. Nothing here is in
 |---|---|---|
 | **Epic** | Portfolio-level initiative. The `epic` label. | Label only — no epic record to maintain |
 | **Feature** | ART-level grouping. The `feature` label. | Label only |
-| **Story** | A ticket with no `parent`. The unit of work. | Yes — one file per story |
-| **Task** | A ticket **with** a `parent`. Breakdown of a story. | Yes — same file format |
+| **Story** | A ticket with no `parent`. The unit of work. | Yes — one block in `TASKS.md` |
+| **Task** | A ticket **with** a `parent`. Breakdown of a story. | Yes — same block format |
 | **Enabler** | `work_type: enabler` — architectural runway rather than business value. | Field value |
 | **PI** | Program Increment. The `increment` label, e.g. `PI-2`. | Label only |
 | **WSJF** | Weighted Shortest Job First. Derived — see §2.4. | Four optional scores |
@@ -226,14 +227,15 @@ so the two projects can eventually join without a rewrite.
 
 | Tier | Source | Cost | When |
 |---|---|---|---|
-| 1 — skeleton | `tasks/INDEX.md` | ~30 tokens/ticket | Always. Finding work, checking status. |
-| 2 — detail | `tasks/T-###.md` | ~300–500 tokens | Only tickets actually being worked. |
-| 3 — history | `git log`, `reports/`, `tasks/archive/` | unbounded | Audit, review, "why did we do that". |
+| 1 — the working set | `TASKS.md` | the whole active backlog in one read | Always. Finding work, checking status. |
+| 2 — the record | `TASKS-DONE.md` | only when you need history | "Has this been done before?" |
+| 3 — deep history | `git log`, `reports/` | unbounded | Audit, "why did we decide that". |
 
-Do not read all of `tasks/` to find work. Read the index.
+At the scale this is built for — a few dozen active stories — tier 1 is one file and one read.
+That is cheaper than an index plus a story file, and it cannot disagree with itself.
 
 ### Finding work
-1. Read `tasks/INDEX.md`.
+1. Read `TASKS.md`.
 2. Pick `state: todo`, no `hold`, all `depends_on` done, highest priority, `stage` gate respected.
 3. Read that one ticket file.
 4. Set `state: doing`, `actor: AI`.
@@ -264,25 +266,15 @@ The problem: at 100+ stories, most are `done` and none of them should cost anyth
 **Location is about permanence. The index is about attention.** Nothing is ever deleted — archiving
 moves a file, and git keeps every version regardless.
 
-### The index is generated, never authored
-This is the rule that stops the "two places to maintain" problem being real.
+### There is no index to keep in sync
+There used to be. Splitting stories across files meant nothing could see the backlog at a glance,
+so a generated `INDEX.md` was added — and then needed a generation date, a story count and a
+staleness rule, all to stop a derived file from lying about the real one.
 
-- Data flows **one way**: story files → `INDEX.md`. Never the reverse.
-- **An agent must never write `INDEX.md`.** Edit the story file; regenerate the index.
-- **The board rewrites it on every save.** An agent editing files directly must regenerate
-  it, or open and save the folder in the board.
-- The index header carries the generation date and story count, so drift is **detectable rather
-  than silent**. If the count disagrees with the folder, regenerate before trusting it.
+`TASKS.md` removes the whole problem. It is not a summary of the backlog; it **is** the backlog.
 
-An index that can be rebuilt from source in one step is a **cache**, not a second source of truth.
-Duplication is only dangerous when it cannot be regenerated.
+The header states how much active, blocked and parked work there is. That is a convenience, not
+a source of truth — if it disagrees with the blocks below, the blocks win, and saving in the
+board rewrites it.
 
-### Index sections, and what an agent reads
-`INDEX.md` carries three sections. **Read the first one only, unless you have a reason:**
-
-1. **Active** — everything not done and not parked. The working set.
-2. **Parked** — deferred work grouped by reason (§5). Read when planning, not when working.
-3. **Recently done** — the last handful, for continuity. Older completions are a count and a
-   pointer to `tasks/archive/`.
-
-At 100 stories with 15 active, an agent loads roughly 500 tokens to find work rather than 40,000.
+*(The split layout still generates its index when saved, for projects already using it.)*

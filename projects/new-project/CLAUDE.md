@@ -24,4 +24,4 @@ If something needs more than about a day, split it.
 ## Current state
 
 Project setup. Ten stories in tasks/. Work them in dependency order — the board
-and tasks/INDEX.md both show what is ready.
+and TASKS.md both show what is ready.

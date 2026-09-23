@@ -2,9 +2,9 @@
 
 ## Finding work
 
-1. Read tasks/INDEX.md. Do not read the whole folder.
+1. Read TASKS.md — every active and parked story, one block each.
 2. Pick a story with state todo, no hold, and all depends_on **done**.
-3. Read that one story file.
+3. Completed work is in TASKS-DONE.md; you rarely need to open it.
 
 ## Working
 
